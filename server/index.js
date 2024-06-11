@@ -33,12 +33,24 @@ await db.execute(`
 io.on("connection", async (socket) => {
   socket.on("chat message", async (msg) => {
     const today = new Date();
+    const todayString =
+      today.getUTCDay() +
+      "-" +
+      (today.getUTCMonth() + 1) +
+      "-" +
+      today.getUTCFullYear() +
+      "-" +
+      today.getUTCHours() +
+      "-" +
+      today.getUTCMinutes() +
+      "-" +
+      today.getUTCMilliseconds;
     const username = socket.handshake.auth.username ?? "anonymous";
     let result;
     try {
       result = await db.execute({
-        sql: "INSERT INTO messages(message, username, created_at) VALUES(:msg, :username, :dateNow)",
-        args: { msg, username, dateNow: today.toDateString() },
+        sql: "INSERT INTO messages(message, username) VALUES(:msg, :username)",
+        args: { msg, username },
       });
     } catch (error) {
       console.error(error);
@@ -53,7 +65,7 @@ io.on("connection", async (socket) => {
     // <---- recuperar los mensajes sin conexion
     try {
       const results = await db.execute({
-        sql: "SELECT id, message, username FROM messages where id > :userId and username = :userName ORDER BY id ASC ",
+        sql: "SELECT * FROM messages where id > :userId and username = :userName ORDER BY id ASC ",
         args: {
           userId: socket.handshake.auth.serverOffset ?? 0,
           userName: socket.handshake.auth.username ?? "",
@@ -65,7 +77,8 @@ io.on("connection", async (socket) => {
           "chat message",
           row.message,
           row.id.toString(),
-          row.username
+          row.username,
+          row.created_at
         );
       });
     } catch (error) {
